@@ -1,7 +1,7 @@
 /* ── Foundation ─────────────────────────────── */
 
 :root {
-	font-family: 'Inter', system-ui, -apple-system, sans-serif;
+	font-family: "Inter", system-ui, -apple-system, sans-serif;
 	line-height: 1.6;
 	color-scheme: light dark;
 	-webkit-font-smoothing: antialiased;
@@ -34,7 +34,7 @@
 	--radius-sm: 8px;
 	--radius-md: 12px;
 	--radius-lg: 16px;
-	--radius-pill: 999px;
+	--radius-pill: 24px;
 
 	--transition-fast: 120ms ease;
 	--transition-smooth: 200ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -157,7 +157,10 @@ p {
 	font-size: 0.8125rem;
 	font-weight: 500;
 	cursor: pointer;
-	transition: color var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
+	transition:
+		color var(--transition-fast),
+		background var(--transition-fast),
+		box-shadow var(--transition-fast);
 	user-select: none;
 }
 
@@ -217,7 +220,11 @@ p {
 	font-weight: 500;
 	padding: 0.5rem 1rem;
 	cursor: pointer;
-	transition: background var(--transition-fast), border-color var(--transition-fast), transform 80ms ease, box-shadow var(--transition-fast);
+	transition:
+		background var(--transition-fast),
+		border-color var(--transition-fast),
+		transform 80ms ease,
+		box-shadow var(--transition-fast);
 }
 
 .camera-btn:hover {
@@ -273,6 +280,34 @@ dialog:not([open]) {
 	-webkit-backdrop-filter: blur(4px);
 }
 
+/* show() non-modal: emulate modal centering via CSS.
+   Stays in normal stacking context so ::view-transition-group
+   can composite the hero morph across both endpoints. */
+.camera-modal[open]:not(:modal) {
+	position: fixed;
+	inset: 0;
+	margin: auto;
+	height: fit-content;
+	z-index: 100;
+}
+
+/* custom backdrop for non-modal dialog (::backdrop only exists for :modal) */
+.modal-backdrop {
+	position: fixed;
+	inset: 0;
+	z-index: 99;
+	background: rgba(0 0 0 / 0.4);
+	backdrop-filter: blur(4px);
+	-webkit-backdrop-filter: blur(4px);
+	animation: backdrop-in 250ms ease-out;
+}
+
+@keyframes backdrop-in {
+	from {
+		opacity: 0;
+	}
+}
+
 .camera-modal-header {
 	display: flex;
 	justify-content: space-between;
@@ -293,14 +328,13 @@ dialog:not([open]) {
 	place-items: center;
 	color: var(--fg-muted);
 	font-size: 0.8125rem;
-	background:
-		repeating-linear-gradient(
-			45deg,
-			transparent,
-			transparent 10px,
-			var(--surface-inset) 10px,
-			var(--surface-inset) 11px
-		);
+	background: repeating-linear-gradient(
+		45deg,
+		transparent,
+		transparent 10px,
+		var(--surface-inset) 10px,
+		var(--surface-inset) 11px
+	);
 }
 
 /* ── Debug Panel ───────────────────────────── */
@@ -312,7 +346,9 @@ dialog:not([open]) {
 	border: 1px solid var(--border);
 	border-radius: var(--radius-md);
 
-	font-family: ui-monospace, 'SF Mono', 'Cascadia Code', 'Fira Code', Menlo, Consolas, monospace;
+	font-family:
+		ui-monospace, "SF Mono", "Cascadia Code", "Fira Code", Menlo, Consolas,
+		monospace;
 	font-size: 0.8125rem;
 	line-height: 1.7;
 	color: var(--fg-muted);
@@ -401,28 +437,44 @@ dialog:not([open]) {
 
 /* ── Hero Morph (View Transition) ──────────── */
 
-/* geometry morph: button rect → modal rect */
+/* suppress root crossfade so only the named hero group animates */
+::view-transition-group(root),
+::view-transition-old(root),
+::view-transition-new(root) {
+	animation: none;
+}
+
+/* geometry morph: button rect → modal rect
+   Target by name (camera-hero) as fallback — the class (.camera-hero-morph)
+   only applies if the `update` trigger fires correctly. */
+::view-transition-group(camera-hero),
 ::view-transition-group(.camera-hero-morph) {
 	animation-duration: 400ms;
 	animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* button content fades out */
+::view-transition-old(camera-hero),
 ::view-transition-old(.camera-hero-morph) {
 	animation: hero-fade-out 150ms ease-out both;
 }
 
 /* modal content fades in (delayed until button fades) */
+::view-transition-new(camera-hero),
 ::view-transition-new(.camera-hero-morph) {
 	animation: hero-fade-in 250ms 150ms ease-out both;
 }
 
 @keyframes hero-fade-out {
-	to { opacity: 0; }
+	to {
+		opacity: 0;
+	}
 }
 
 @keyframes hero-fade-in {
-	from { opacity: 0; }
+	from {
+		opacity: 0;
+	}
 }
 
 /* ── Reduced Motion ────────────────────────── */

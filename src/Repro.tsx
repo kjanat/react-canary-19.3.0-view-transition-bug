@@ -83,23 +83,19 @@ export function ReproApp() {
 	const stats = useAnimationDebugStats();
 	const isWorkaround = mode === 'workaround';
 
+	// Both modes: dialog is always mounted, imperatively showModal/close.
 	useLayoutEffect(() => {
 		const dialog = dialogRef.current;
-		if (heroOwner === 'dialog' && dialog !== null && !dialog.open) {
-			// non-modal: both modes use show() to keep the dialog in normal
-			// stacking context. The ONLY variable between modes is the
-			// `update` config on <ViewTransition> — broken omits it, so
-			// no hero morph fires.
+		if (dialog === null) return;
+		if (heroOwner === 'dialog' && !dialog.open) {
 			dialog.show();
+		} else if (heroOwner === 'button' && dialog.open) {
+			dialog.close();
 		}
 	}, [heroOwner]);
 
 	function handleOpenModal() {
-		const dialog = dialogRef.current;
-		if (dialog === null || dialog.open) {
-			return;
-		}
-
+		if (heroOwner === 'dialog') return;
 		setOpenClicks((count) => count + 1);
 		startTransition(() => {
 			addTransitionType('camera-modal');
@@ -108,18 +104,29 @@ export function ReproApp() {
 	}
 
 	function handleCloseModal() {
-		const dialog = dialogRef.current;
-		if (dialog !== null && dialog.open) {
-			dialog.close();
-		}
-		setHeroOwner('button');
+		startTransition(() => {
+			addTransitionType('camera-modal');
+			setHeroOwner('button');
+		});
 	}
 
 	function handleSetMode(next: Mode) {
 		if (next === mode) return;
-		handleCloseModal();
+		setHeroOwner('button');
 		setMode(next);
 	}
+
+	const modalContent = (
+		<>
+			<div className='camera-modal-header'>
+				<strong>Live camera</strong>
+				<button type='button' className='camera-btn' onClick={handleCloseModal}>
+					Sluiten
+				</button>
+			</div>
+			<div className='camera-preview'>Camera preview placeholder</div>
+		</>
+	);
 
 	return (
 		<main data-mode={mode}>
@@ -151,48 +158,43 @@ export function ReproApp() {
 			</header>
 
 			<div className='card'>
+				{
+					/* ── Both modes: identical two-boundary structure ────────
+				    Only difference: workaround adds `update` prop + data-hero-owner
+				    mutation hack to tickle the Update flag. */
+				}
 				<ViewTransition
 					name={heroOwner === 'button' ? 'camera-hero' : undefined}
 					share='camera-hero-morph'
 					default='none'
-					update={isWorkaround ? UPDATE_CONFIG : undefined}
+					{...(isWorkaround ? { update: UPDATE_CONFIG } : {})}
 				>
 					<button
 						type='button'
 						className='camera-btn camera-btn--primary'
-						data-hero-owner={isWorkaround ? heroOwner : undefined}
 						onClick={handleOpenModal}
+						style={heroOwner === 'dialog' ? { visibility: 'hidden' } : undefined}
+						{...(isWorkaround ? { 'data-hero-owner': heroOwner } : {})}
 					>
 						Gebruik live camera
 					</button>
 				</ViewTransition>
-
 				<ViewTransition
 					name={heroOwner === 'dialog' ? 'camera-hero' : undefined}
 					share='camera-hero-morph'
 					default='none'
-					update={isWorkaround ? UPDATE_CONFIG : undefined}
+					{...(isWorkaround ? { update: UPDATE_CONFIG } : {})}
 				>
 					<dialog
 						ref={dialogRef}
 						className='camera-modal'
-						data-hero-owner={isWorkaround ? heroOwner : undefined}
+						{...(isWorkaround ? { 'data-hero-owner': heroOwner } : {})}
 					>
-						<div className='camera-modal-header'>
-							<strong>Live camera</strong>
-							<button
-								type='button'
-								className='camera-btn'
-								onClick={handleCloseModal}
-							>
-								Sluiten
-							</button>
-						</div>
-						<div className='camera-preview'>Camera preview placeholder</div>
+						{modalContent}
 					</dialog>
 				</ViewTransition>
 
-				{heroOwner === 'dialog' && isWorkaround && <div className='modal-backdrop' aria-hidden='true' />}
+				{heroOwner === 'dialog' && <div className='modal-backdrop' aria-hidden='true' />}
 
 				<div className='debug'>
 					<p>

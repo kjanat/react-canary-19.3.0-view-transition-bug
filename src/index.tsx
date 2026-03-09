@@ -1,5 +1,5 @@
 import { createRoot } from 'react-dom/client';
-import { ReproApp } from './repro-app.tsx';
+import { ReproApp } from './Repro.tsx';
 
 const root = document.getElementById('root');
 

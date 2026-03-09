@@ -15,7 +15,8 @@ A `<ViewTransition>` whose `name` prop changes between renders does not trigger 
 
 No existing issue or PR addresses this (searched `facebook/react` 2026-03-08).
 
-Reproduction: https://codesandbox.io/p/sandbox/brave-blackwell-szxfys
+Reproduction: <https://codesandbox.io/p/sandbox/yx5sdy>\
+Preview: <https://yx5sdy.csb.app/>
 
 ## Versions
 
