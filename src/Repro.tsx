@@ -14,7 +14,7 @@ type Mode = 'broken' | 'workaround';
 const UPDATE_CONFIG = {
   default: 'none',
   'camera-modal': 'camera-hero-morph',
-};
+} as const;
 
 // ── Module-level VT warning suppression ─────────────────────────────
 // Must intercept before React's first commit — useEffect is too late
