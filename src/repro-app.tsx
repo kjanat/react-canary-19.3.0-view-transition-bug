@@ -5,6 +5,7 @@ import {
 	useLayoutEffect,
 	useRef,
 	useState,
+	useSyncExternalStore,
 	ViewTransition,
 } from 'react';
 
@@ -15,74 +16,90 @@ const UPDATE_CONFIG = {
 	'camera-modal': 'camera-hero-morph',
 };
 
+// ── Module-level VT warning suppression ─────────────────────────────
+// Must intercept before React's first commit — useEffect is too late
+// because trackNamedViewTransition fires during layout effects.
+const ORIGINAL_CONSOLE_ERROR = console.error;
+let vtDuplicateWarnings = 0;
+const vtWarningListeners = new Set<() => void>();
+
+console.error = (...args: unknown[]) => {
+	if (
+		args.some(
+			(a) =>
+				typeof a === 'string'
+				&& (a.includes('same name mounted at the same time')
+					|| a.includes('duplicate has this stack trace')
+					|| a.includes('ViewTransition name=')),
+		)
+	) {
+		vtDuplicateWarnings++;
+		for (const listener of vtWarningListeners) listener();
+		return;
+	}
+	ORIGINAL_CONSOLE_ERROR.apply(console, args);
+};
+
+// ── Debug stats hook ────────────────────────────────────────────────
+
 function useAnimationDebugStats() {
-	const [stats, setStats] = useState({
-		startCalls: 0,
-		duplicateNameWarnings: 0,
-	});
+	const duplicateNameWarnings = useSyncExternalStore(
+		(cb) => {
+			vtWarningListeners.add(cb);
+			return () => {
+				vtWarningListeners.delete(cb);
+			};
+		},
+		() => vtDuplicateWarnings,
+	);
+
+	const [startCalls, setStartCalls] = useState(0);
 
 	useEffect(() => {
 		const originalStart = document.startViewTransition;
-		const originalConsoleError = console.error;
-
 		if (originalStart) {
 			document.startViewTransition = function(...args) {
-				setStats((s) => ({ ...s, startCalls: s.startCalls + 1 }));
+				setStartCalls((c) => c + 1);
 				return originalStart.apply(this, args);
 			};
 		}
-
-		console.error = (...args) => {
-			const message = args.map((arg) => String(arg)).join(' ');
-			if (
-				message.includes('same name mounted at the same time')
-				|| message.includes('There are two <ViewTransition name=%s> components')
-				|| message.includes('duplicate has this stack trace')
-			) {
-				setStats((s) => ({
-					...s,
-					duplicateNameWarnings: s.duplicateNameWarnings + 1,
-				}));
-				return; // suppress — don't forward to Parcel's overlay
-			}
-			originalConsoleError(...args);
-		};
-
 		return () => {
 			if (originalStart) {
 				document.startViewTransition = originalStart;
 			}
-			console.error = originalConsoleError;
 		};
 	}, []);
 
-	return stats;
+	return { startCalls, duplicateNameWarnings };
 }
+
+// ── Component ───────────────────────────────────────────────────────
 
 export function ReproApp() {
 	const [mode, setMode] = useState<Mode>('broken');
 	const [heroOwner, setHeroOwner] = useState<'button' | 'dialog'>('button');
 	const [openClicks, setOpenClicks] = useState(0);
 	const dialogRef = useRef<HTMLDialogElement | null>(null);
-	const openingRef = useRef(false);
 	const stats = useAnimationDebugStats();
 	const isWorkaround = mode === 'workaround';
 
 	useLayoutEffect(() => {
 		const dialog = dialogRef.current;
 		if (heroOwner === 'dialog' && dialog !== null && !dialog.open) {
-			dialog.showModal();
-			openingRef.current = false;
+			// non-modal: both modes use show() to keep the dialog in normal
+			// stacking context. The ONLY variable between modes is the
+			// `update` config on <ViewTransition> — broken omits it, so
+			// no hero morph fires.
+			dialog.show();
 		}
 	}, [heroOwner]);
 
 	function handleOpenModal() {
 		const dialog = dialogRef.current;
-		if (dialog === null || dialog.open || openingRef.current) {
+		if (dialog === null || dialog.open) {
 			return;
 		}
 
-		openingRef.current = true;
 		setOpenClicks((count) => count + 1);
 		startTransition(() => {
 			addTransitionType('camera-modal');
@@ -96,18 +113,16 @@ export function ReproApp() {
 			dialog.close();
 		}
 		setHeroOwner('button');
-		openingRef.current = false;
 	}
 
 	function handleSetMode(next: Mode) {
 		if (next === mode) return;
-		// Close modal when switching modes to avoid stale state
 		handleCloseModal();
 		setMode(next);
 	}
 
 	return (
-		<main>
+		<main data-mode={mode}>
 			<header className='page-header'>
 				<h1>ViewTransition camera hero repro</h1>
 				<p className='hint'>
@@ -176,6 +191,8 @@ export function ReproApp() {
 						<div className='camera-preview'>Camera preview placeholder</div>
 					</dialog>
 				</ViewTransition>
+
+				{heroOwner === 'dialog' && isWorkaround && <div className='modal-backdrop' aria-hidden='true' />}
 
 				<div className='debug'>
 					<p>

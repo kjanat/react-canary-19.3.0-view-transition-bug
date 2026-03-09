@@ -3,7 +3,7 @@
 	"version": "1.0.0",
 	"author": "Kaj Kowalski <info@kajkowalski.nl> (https://github.com/kjanat)",
 	"scripts": {
-		"start": "parcel src/index.html",
+		"dev": "parcel src/index.html",
 		"build": "parcel build src/index.html",
 		"typecheck": "tsc --noEmit"
 	},
