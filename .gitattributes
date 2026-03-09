@@ -1,0 +1,2 @@
+bun.lock -diff linguist-generated
+.zed/*.jsonc linguist-language=JSON-With-Comments

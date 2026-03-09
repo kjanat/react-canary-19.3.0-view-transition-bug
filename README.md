@@ -1,11 +1,37 @@
-# React Issue Draft
+# React `<ViewTransition>` name-prop bug reproduction
 
-**Repo:** <https://github.com/facebook/react>\
-**Title:** `<ViewTransition>`: name prop changes don't trigger transitions without child DOM mutations
+Minimal reproduction for a React canary bug where changing a `<ViewTransition>` component's `name` prop between renders does **not** trigger a view transition unless a child DOM mutation also occurs.
+
+**Repo:** <https://github.com/kjanat/react-canary-19.3.0-view-transition-bug>\
+**Live sandbox:** <https://codesandbox.io/p/sandbox/yx5sdy> ([preview](https://yx5sdy.csb.app/))
+
+## Quick start
+
+```sh
+bun install
+bun dev      # Parcel dev server
+```
+
+Open the app and toggle between **Broken** and **Workaround** modes to see the difference.
+
+## Versions
+
+- `react`: `19.3.0-canary-46103596-20260305`
+- `react-dom`: `19.3.0-canary-46103596-20260305`
+
+## Project structure
+
+```tree
+index.html          Entry point (Parcel root)
+src/
+  index.tsx         React root mount
+  Repro.tsx         Single component with broken/workaround mode toggle
+  styles.css        Styling + view-transition CSS
+```
 
 ---
 
-## Summary
+## Bug summary
 
 A `<ViewTransition>` whose `name` prop changes between renders does not trigger the view transition update pipeline unless a child DOM mutation also occurs. This makes hero morphs via name-prop toggling on mounted components silently fail.
 
@@ -15,73 +41,13 @@ A `<ViewTransition>` whose `name` prop changes between renders does not trigger 
 
 No existing issue or PR addresses this (searched `facebook/react` 2026-03-08).
 
-Reproduction: <https://codesandbox.io/p/sandbox/yx5sdy>\
-Preview: <https://yx5sdy.csb.app/>
+### Expected
 
-## Versions
+Opening the modal morphs smoothly from trigger button to dialog (shared `camera-hero` element).
 
-- `react`: `19.3.0-canary-46103596-20260305`
-- `react-dom`: `19.3.0-canary-46103596-20260305`
-- Browser: Chromium 145 (stable)
+### Actual
 
-## Reproduction
-
-Standalone repro files (no bundler/build tooling):
-
-- `index.html` (launcher)
-- `broken.html`
-- `workaround.html`
-
-Broken case core snippet:
-
-```tsx
-import { addTransitionType, startTransition, useLayoutEffect, useRef, useState, ViewTransition } from 'react';
-
-function App() {
-	const [heroOwner, setHeroOwner] = useState<'button' | 'dialog'>('button');
-	const dialogRef = useRef<HTMLDialogElement | null>(null);
-
-	useLayoutEffect(() => {
-		const dialog = dialogRef.current;
-		if (heroOwner === 'dialog' && dialog !== null && !dialog.open) {
-			dialog.showModal();
-		}
-	}, [heroOwner]);
-
-	return (
-		<>
-			<ViewTransition
-				name={heroOwner === 'button' ? 'camera-hero' : undefined}
-				share='camera-hero-morph'
-				default='none'
-			>
-				<button
-					type='button'
-					onClick={() =>
-						startTransition(() => {
-							addTransitionType('camera-modal');
-							setHeroOwner('dialog');
-						})}
-				>
-					Gebruik live camera
-				</button>
-			</ViewTransition>
-
-			<ViewTransition
-				name={heroOwner === 'dialog' ? 'camera-hero' : undefined}
-				share='camera-hero-morph'
-				default='none'
-			>
-				<dialog ref={dialogRef}>...</dialog>
-			</ViewTransition>
-		</>
-	);
-}
-```
-
-**Expected:** opening modal morphs smoothly from trigger button to dialog (shared `camera-hero` element).
-
-**Actual:** modal appears instantly (jump/no hero morph). In internals, old snapshot gets the name but new snapshot is cancelled via `opacity: [0, 0]` path.
+Modal appears instantly (jump/no hero morph). In internals, old snapshot gets the name but new snapshot is cancelled via `opacity: [0, 0]` path.
 
 ### Proposed correct behavior
 
@@ -89,68 +55,16 @@ When a `<ViewTransition>` component's `name` prop changes between renders, React
 
 ## Workaround
 
-Two changes required simultaneously:
+Two changes required simultaneously (visible in workaround mode):
 
-```tsx
-import { addTransitionType, startTransition, useLayoutEffect, useRef, useState, ViewTransition } from 'react';
+1. **`update` prop** — unblocks VT processing (otherwise `default='none'` gates it out)
+2. **`data-hero-owner={heroOwner}`** attribute — forces a DOM mutation that sets the internal `Update` flag on the VT fiber
 
-function App() {
-	const [heroOwner, setHeroOwner] = useState<'button' | 'dialog'>('button');
-	const dialogRef = useRef<HTMLDialogElement | null>(null);
-
-	useLayoutEffect(() => {
-		const dialog = dialogRef.current;
-		if (heroOwner === 'dialog' && dialog !== null && !dialog.open) {
-			dialog.showModal();
-		}
-	}, [heroOwner]);
-
-	const updateConfig = { default: 'none', 'camera-modal': 'camera-hero-morph' };
-
-	return (
-		<>
-			<ViewTransition
-				name={heroOwner === 'button' ? 'camera-hero' : undefined}
-				share='camera-hero-morph'
-				default='none'
-				update={updateConfig} // 1. explicit update mapping
-			>
-				<button
-					type='button'
-					data-hero-owner={heroOwner} // 2. force DOM mutation
-					onClick={() =>
-						startTransition(() => {
-							addTransitionType('camera-modal');
-							setHeroOwner('dialog');
-						})}
-				>
-					Gebruik live camera
-				</button>
-			</ViewTransition>
-
-			<ViewTransition
-				name={heroOwner === 'dialog' ? 'camera-hero' : undefined}
-				share='camera-hero-morph'
-				default='none'
-				update={updateConfig}
-			>
-				<dialog ref={dialogRef} data-hero-owner={heroOwner}>...</dialog>
-			</ViewTransition>
-		</>
-	);
-}
-```
-
-Both are necessary:
-
-- The `update` prop unblocks VT processing (otherwise `default='none'` gates it out).
-- The `data-owner={owner}` attribute change triggers a DOM mutation that sets the internal `Update` flag on the VT fiber.
-
-The `data-owner` attribute serves no purpose other than tickling the mutation phase into setting a flag that logically should depend only on the name change itself.
+The `data-hero-owner` attribute serves no purpose other than tickling the mutation phase into setting a flag that logically should depend only on the name change itself.
 
 ## Root cause (source references)
 
-All references below are GitHub permalinks to React commit [`4610359651fa10247159e2050f8ec222cb7faa91`][react-commit], matching `react-dom@19.3.0-canary-46103596-20260305` (`npm view react-dom@19.3.0-canary-46103596-20260305 gitHead`).
+All references below are GitHub permalinks to React commit [`4610359651fa10247159e2050f8ec222cb7faa91`][react-commit], matching `react-dom@19.3.0-canary-46103596-20260305`.
 
 [react-commit]: https://github.com/facebook/react/commit/4610359651fa10247159e2050f8ec222cb7faa91 "React commit matching the canary build"
 
@@ -160,7 +74,7 @@ In [`measureViewTransitionHostInstancesRecursive`][measure-recursive], the `Upda
 
 ```js
 (parentViewTransition.flags & Update) !== NoFlags
-	&& applyViewTransitionName(instance, newName, className);
+  && applyViewTransitionName(instance, newName, className);
 ```
 
 The `Update` flag is set in the mutation phase ([`ReactFiberCommitWork.js#L2634-L2643`][update-flag-set]) only when `viewTransitionMutationContext` is `true`:
@@ -175,12 +89,12 @@ If only the VT's `name` prop changes — with no child mutations and no layout c
 
 ```js
 current.animate(
-	{ opacity: [0, 0], pointerEvents: ['none', 'none'] },
-	{
-		duration: 0,
-		fill: 'forwards',
-		pseudoElement: '::view-transition-group(' + oldName + ')',
-	},
+  { opacity: [0, 0], pointerEvents: ['none', 'none'] },
+  {
+    duration: 0,
+    fill: 'forwards',
+    pseudoElement: '::view-transition-group(' + oldName + ')',
+  },
 );
 ```
 
@@ -188,7 +102,7 @@ React already detects the name change in `beginWork` at [`ReactFiberBeginWork.js
 
 ```js
 if (current !== null && current.memoizedProps.name !== pendingProps.name) {
-	workInProgress.flags |= Ref | RefStatic;
+  workInProgress.flags |= Ref | RefStatic;
 }
 ```
 
@@ -216,6 +130,12 @@ Additionally, the `share` className may need to be consulted in the update path 
 
 The `<ViewTransition>` documentation distinguishes `share` (enter/exit pairing) from `update` (DOM mutations / layout effects), but does not clarify what should happen when only the `name` prop changes across already-mounted `<ViewTransition>` boundaries. It's unclear whether mounted name toggling is expected to produce a transition or is intentionally unsupported.
 
+## License
+
+[MIT](LICENSE)
+
+<!--link-definitions-->
+
 [commit-enter]: https://github.com/facebook/react/blob/4610359651fa10247159e2050f8ec222cb7faa91/packages/react-reconciler/src/ReactFiberCommitViewTransitions.js#L287-L326 "commitEnterViewTransitions"
 [commit-exit]: https://github.com/facebook/react/blob/4610359651fa10247159e2050f8ec222cb7faa91/packages/react-reconciler/src/ReactFiberCommitViewTransitions.js#L409-L450 "commitExitViewTransitions"
 [measure-recursive]: https://github.com/facebook/react/blob/4610359651fa10247159e2050f8ec222cb7faa91/packages/react-reconciler/src/ReactFiberCommitViewTransitions.js#L642-L704 "measureViewTransitionHostInstancesRecursive"
@@ -225,5 +145,3 @@ The `<ViewTransition>` documentation distinguishes `share` (enter/exit pairing) 
 [before-mutation-gate]: https://github.com/facebook/react/blob/4610359651fa10247159e2050f8ec222cb7faa91/packages/react-reconciler/src/ReactFiberCommitViewTransitions.js#L489-L512 "Before-mutation old-name application gate"
 [after-mutation-gate]: https://github.com/facebook/react/blob/4610359651fa10247159e2050f8ec222cb7faa91/packages/react-reconciler/src/ReactFiberCommitViewTransitions.js#L768-L803 "After-mutation new-name measurement gate"
 [name-change-detected]: https://github.com/facebook/react/blob/4610359651fa10247159e2050f8ec222cb7faa91/packages/react-reconciler/src/ReactFiberBeginWork.js#L3617-L3621 "ViewTransition name-change detection in beginWork"
-
-<!--markdownlint-disable-file-->
