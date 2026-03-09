@@ -12,14 +12,7 @@ Open the app and toggle between **Broken** and **Workaround** modes to see the d
 - `react`: `19.3.0-canary-46103596-20260305`
 - `react-dom`: `19.3.0-canary-46103596-20260305`
 
-## Project structure
-
-| File                       | Role                                           |
-| -------------------------- | ---------------------------------------------- |
-| [`index.html`](index.html) | Entry point (Parcel root)                      |
-| [`src/index.tsx`][index]   | React root mount                               |
-| [`src/Repro.tsx`][repro]   | Single component with broken/workaround toggle |
-| [`src/styles.css`][styles] | Styling + view-transition CSS                  |
+Repro component in [`src/Repro.tsx`][repro], view-transition CSS in [`src/styles.css`][styles], debug instrumentation in [`src/debug.ts`][debug].
 
 ---
 
@@ -147,11 +140,12 @@ The `<ViewTransition>` documentation distinguishes `share` (enter/exit pairing) 
 
 [index]: src/index.tsx "React root mount"
 [repro]: src/Repro.tsx "Repro component"
+[debug]: src/debug.ts "VT warning suppression + animation debug counters"
 [styles]: src/styles.css "Styling + view-transition CSS"
-[repro-vt-blocks]: src/Repro.tsx#L166-L195 "Both <ViewTransition> boundaries with name-prop toggling"
-[repro-default-none]: src/Repro.tsx#L169 "default='none' on first VT boundary"
-[repro-update-prop]: src/Repro.tsx#L170 "Workaround: conditional update prop spread"
-[repro-mutation-hack]: src/Repro.tsx#L177 "Workaround: data-hero-owner DOM mutation hack"
+[repro-vt-blocks]: src/Repro.tsx#L106-L135 "Both <ViewTransition> boundaries with name-prop toggling"
+[repro-default-none]: src/Repro.tsx#L109 "default='none' on first VT boundary"
+[repro-update-prop]: src/Repro.tsx#L110 "Workaround: conditional update prop spread"
+[repro-mutation-hack]: src/Repro.tsx#L117 "Workaround: data-hero-owner DOM mutation hack"
 [repro-hero-css]: src/styles.css#L440-L478 "Hero morph view-transition CSS animations"
 
 <!--link-definitions: React source-->
