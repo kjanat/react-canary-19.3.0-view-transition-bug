@@ -21,6 +21,11 @@
     "@swc/core",
     "@parcel/watcher",
   ],
+  "overrides": {
+    "react": "file:./vendor/react-19.3.0.tgz",
+    "react-dom": "file:./vendor/react-dom-19.3.0.tgz",
+    "scheduler": "0.28.0-canary-900ae094-20260605",
+  },
   "packages": {
     "@dprint/darwin-arm64": ["@dprint/darwin-arm64@0.52.0", "", { "os": "darwin", "cpu": "arm64" }, "sha512-HHpmHCeFw1V9qUU0pJrz7LihrMgQJ5DOejfI3GRCJOd2ue3Api3/ZrzNSIqUbnx/j0RT5c7zxZR5aTE0RHwRFQ=="],
 
@@ -358,9 +363,9 @@
 
     "postcss-value-parser": ["postcss-value-parser@4.2.0", "", {}, "sha512-1NNCs6uurfkVbeXG4S8JFT9t19m45ICnif8zWLd5oPSZ50QnwMfK+H3jv408d4jw/7Bttv5axS5IiHoLaVNHeQ=="],
 
-    "react": ["react@19.3.0-canary-900ae094-20260605", "", {}, "sha512-NjnewHrkdcumCpkB6uXXDEqKzZYjW3zom2v8zXPEZNZTeDXQXqqqnSEKngPZZ0p7FOfMz6qs72NE3kqMr7un9g=="],
+    "react": ["react@./vendor/react-19.3.0.tgz", {}, "sha512-rCN59vjoMej0kD+7vsdyc3u2m8cujFqjjNFfd2moVlIPttK8RQ4hnxJLI304bXOKF6jl3ZpvSReybkVmHVHhlA=="],
 
-    "react-dom": ["react-dom@19.3.0-canary-900ae094-20260605", "", { "dependencies": { "scheduler": "0.28.0-canary-900ae094-20260605" }, "peerDependencies": { "react": "19.3.0-canary-900ae094-20260605" } }, "sha512-BOyPOnZkYVzYub9sckRsibqWkCrgP0093W7bJU2l8Kr/2wMFUEfVS9K/ubIVq2+pTG7ECTro1L98h+sJeQGwxA=="],
+    "react-dom": ["react-dom@./vendor/react-dom-19.3.0.tgz", { "dependencies": { "scheduler": "^0.28.0" }, "peerDependencies": { "react": "^19.3.0" } }, "sha512-blNRRv4JoyivjKQhDWaKvYDySUijoOHQYD+auejPaZC/+3djoUDykyphwiZmDVUkUueoPbtPAUHN7hXuwAVGpw=="],
 
     "react-refresh": ["react-refresh@0.16.0", "", {}, "sha512-FPvF2XxTSikpJxcr+bHut2H4gJ17+18Uy20D5/F+SKzFap62R3cM5wH6b8WN3LyGSYeQilLEcJcR1fjBSI2S1A=="],
 

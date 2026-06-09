@@ -1,0 +1,195 @@
+diff --git a/packages/react-dom/src/__tests__/ReactDOMViewTransition-test.js b/packages/react-dom/src/__tests__/ReactDOMViewTransition-test.js
+index a44b3f5235..da27500983 100644
+--- a/packages/react-dom/src/__tests__/ReactDOMViewTransition-test.js
++++ b/packages/react-dom/src/__tests__/ReactDOMViewTransition-test.js
+@@ -418,6 +418,122 @@ describe('ReactDOMViewTransition', () => {
+       expect(onEnterB).not.toHaveBeenCalled();
+     });
+ 
++    // @gate enableViewTransition
++    it('fires onUpdate when the name changes with no layout change (default="none" + share)', async () => {
++      // This is the camera-hero morph reduced to one boundary: the `name` prop
++      // changes between renders with no child DOM mutation and no layout change.
++      // It mirrors the repro's config (default="none" + share). The name change
++      // alone must drive the boundary's update so the share class is applied to
++      // the host instance and the morph runs.
++      //
++      // IMPORTANT: jsdom's getComputedStyle returns '' for clipPath/overflow/etc,
++      // which makes createMeasurement() flag every boundary as a "clip" parent so
++      // hasInstanceChanged() always returns true. That would mask whether the
++      // Update flag is actually driven by the name change (the behaviour a real
++      // browser depends on) instead of by a spurious measured change. We return
++      // realistic computed styles so clip=false; combined with an unchanged
++      // bounding rect, the name change is the ONLY thing that can mark this
++      // boundary as updated.
++      const realComputedStyle = new Proxy(
++        {},
++        {
++          get(_target, prop) {
++            switch (prop) {
++              case 'clipPath':
++                return 'none';
++              case 'overflow':
++                return 'visible';
++              case 'filter':
++                return 'none';
++              case 'mask':
++                return 'none';
++              case 'borderRadius':
++                return '0px';
++              case 'position':
++                return 'static';
++              case 'display':
++                return 'block';
++              default:
++                return '';
++            }
++          },
++        },
++      );
++      const originalGetComputedStyle = global.getComputedStyle;
++      global.getComputedStyle = () => realComputedStyle;
++
++      const onUpdate = jest.fn();
++
++      function App({name}) {
++        return (
++          <ViewTransition
++            name={name}
++            share="morph"
++            default="none"
++            onUpdate={onUpdate}>
++            <div>Static</div>
++          </ViewTransition>
++        );
++      }
++
++      const root = ReactDOMClient.createRoot(container);
++
++      try {
++        await act(() => {
++          startTransition(() => {
++            root.render(<App name="hero-a" />);
++          });
++        });
++
++        onUpdate.mockClear();
++
++        // Only the name changes. The child text is identical, so there is no DOM
++        // mutation and (with the computed-style mock) no measured change.
++        await act(() => {
++          startTransition(() => {
++            root.render(<App name="hero-b" />);
++          });
++        });
++
++        expect(onUpdate).toHaveBeenCalledTimes(1);
++      } finally {
++        global.getComputedStyle = originalGetComputedStyle;
++      }
++    });
++
++    // @gate enableViewTransition
++    it('does not treat a no-op render as an update when default="none" and no name change', async () => {
++      // Guard: default="none" with a share class must still gate out ordinary
++      // re-renders that neither mutate the DOM nor change the name.
++      const onUpdate = jest.fn();
++
++      function App() {
++        return (
++          <ViewTransition share="morph" default="none" onUpdate={onUpdate}>
++            <div>Static</div>
++          </ViewTransition>
++        );
++      }
++
++      const root = ReactDOMClient.createRoot(container);
++
++      await act(() => {
++        startTransition(() => {
++          root.render(<App />);
++        });
++      });
++
++      onUpdate.mockClear();
++
++      await act(() => {
++        startTransition(() => {
++          root.render(<App />);
++        });
++      });
++
++      expect(onUpdate).not.toHaveBeenCalled();
++    });
++
+     // @gate enableViewTransition
+     it('fires onEnter when Suspense content resolves', async () => {
+       const onEnter = jest.fn();
+diff --git a/packages/react-reconciler/src/ReactFiberCommitViewTransitions.js b/packages/react-reconciler/src/ReactFiberCommitViewTransitions.js
+index d1b72b5a83..c79d0a0d05 100644
+--- a/packages/react-reconciler/src/ReactFiberCommitViewTransitions.js
++++ b/packages/react-reconciler/src/ReactFiberCommitViewTransitions.js
+@@ -537,10 +537,17 @@ export function commitBeforeUpdateViewTransition(
+   // For example, if update="foo" layout="none" and it turns out this was
+   // a layout only change, then the "foo" class will be applied even though
+   // it was not actually an update. Which is a bug.
+-  const className: ?string = getViewTransitionClassName(
++  let className: ?string = getViewTransitionClassName(
+     newProps.default,
+     newProps.update,
+   );
++  if (className === 'none' && oldProps.name !== newProps.name) {
++    // A change to the `name` prop is a sharing/morph event, not an ordinary
++    // content update. `default="none"` only opts out of ordinary updates, so it
++    // must not suppress a name handoff. Fall back to the `share` class, which is
++    // how this boundary opts in to animating shared names.
++    className = getViewTransitionClassName(newProps.default, newProps.share);
++  }
+   if (className === 'none') {
+     // If update is "none" then we don't have to apply a name. Since we won't animate this boundary.
+     return;
+@@ -866,10 +873,17 @@ export function measureUpdateViewTransition(
+   const newName = getViewTransitionName(props, state);
+   const oldName = getViewTransitionName(oldFiber.memoizedProps, state);
+   // Whether it ends up having been updated or relayout we apply the update class name.
+-  const className: ?string = getViewTransitionClassName(
++  let className: ?string = getViewTransitionClassName(
+     props.default,
+     props.update,
+   );
++  if (className === 'none' && oldFiber.memoizedProps.name !== props.name) {
++    // A change to the `name` prop is a sharing/morph event, not an ordinary
++    // content update. `default="none"` only opts out of ordinary updates, so it
++    // must not suppress a name handoff. Fall back to the `share` class, which is
++    // how this boundary opts in to animating shared names.
++    className = getViewTransitionClassName(props.default, props.share);
++  }
+   if (className === 'none') {
+     // If update is "none" then we don't have to apply a name. Since we won't animate this boundary.
+     return false;
+diff --git a/packages/react-reconciler/src/ReactFiberCommitWork.js b/packages/react-reconciler/src/ReactFiberCommitWork.js
+index 77524c70d5..3fa66890dc 100644
+--- a/packages/react-reconciler/src/ReactFiberCommitWork.js
++++ b/packages/react-reconciler/src/ReactFiberCommitWork.js
+@@ -2665,11 +2665,20 @@ function commitMutationEffectsOnFiber(
+           if (current === null) {
+             // This is a new mount. We should have handled this as part of the
+             // Placement effect or it is deeper inside a entering transition.
+-          } else if (viewTransitionMutationContext) {
++          } else if (
++            viewTransitionMutationContext ||
++            current.memoizedProps.name !== finishedWork.memoizedProps.name
++          ) {
+             // Something mutated in this tree so we need to animate this regardless
+             // what the measurements say. We use the Update flag to track this.
+             // If diffing was done in the render phase, like we used, this could have
+             // been done in the render already.
++            // A change to the `name` prop is itself a semantically meaningful view
++            // transition change (a shared-element/morph handoff), so we treat it as
++            // an update even without a child DOM mutation or a measured layout change
++            // — a real browser won't produce one for a name-only change. The measure
++            // and snapshot phases gate the actual name application on the resolved
++            // class name, so this flag is a no-op when the boundary opts out.
+             finishedWork.flags |= Update;
+           }
+         }
