@@ -11,8 +11,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "react": "19.3.0-canary-46103596-20260305",
-    "react-dom": "19.3.0-canary-46103596-20260305"
+    "react": "19.3.0-canary-900ae094-20260605",
+    "react-dom": "19.3.0-canary-900ae094-20260605"
   },
   "devDependencies": {
     "@types/react": "19.2.14",

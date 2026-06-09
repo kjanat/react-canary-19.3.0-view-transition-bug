@@ -5,8 +5,8 @@
     "": {
       "name": "view-transition-bug",
       "dependencies": {
-        "react": "19.3.0-canary-46103596-20260305",
-        "react-dom": "19.3.0-canary-46103596-20260305",
+        "react": "19.3.0-canary-900ae094-20260605",
+        "react-dom": "19.3.0-canary-900ae094-20260605",
       },
       "devDependencies": {
         "@types/react": "19.2.14",
@@ -358,9 +358,9 @@
 
     "postcss-value-parser": ["postcss-value-parser@4.2.0", "", {}, "sha512-1NNCs6uurfkVbeXG4S8JFT9t19m45ICnif8zWLd5oPSZ50QnwMfK+H3jv408d4jw/7Bttv5axS5IiHoLaVNHeQ=="],
 
-    "react": ["react@19.3.0-canary-46103596-20260305", "", {}, "sha512-didbQF2PPuqv9GbxmIhfBSctPrye+oIDv3bjxKNjbRmy1o0zPwDYBMZ75cX1fMevZUOSfLtWCgipO4GadSNwkQ=="],
+    "react": ["react@19.3.0-canary-900ae094-20260605", "", {}, "sha512-NjnewHrkdcumCpkB6uXXDEqKzZYjW3zom2v8zXPEZNZTeDXQXqqqnSEKngPZZ0p7FOfMz6qs72NE3kqMr7un9g=="],
 
-    "react-dom": ["react-dom@19.3.0-canary-46103596-20260305", "", { "dependencies": { "scheduler": "0.28.0-canary-46103596-20260305" }, "peerDependencies": { "react": "19.3.0-canary-46103596-20260305" } }, "sha512-yDYAj5jQVxt443YarpckJYDBJwLmKiypG29Uh+nl/0pTmt1qrwUhmFFxMj20JvjI0uQt5+UDMSZzjU17S2vjbw=="],
+    "react-dom": ["react-dom@19.3.0-canary-900ae094-20260605", "", { "dependencies": { "scheduler": "0.28.0-canary-900ae094-20260605" }, "peerDependencies": { "react": "19.3.0-canary-900ae094-20260605" } }, "sha512-BOyPOnZkYVzYub9sckRsibqWkCrgP0093W7bJU2l8Kr/2wMFUEfVS9K/ubIVq2+pTG7ECTro1L98h+sJeQGwxA=="],
 
     "react-refresh": ["react-refresh@0.16.0", "", {}, "sha512-FPvF2XxTSikpJxcr+bHut2H4gJ17+18Uy20D5/F+SKzFap62R3cM5wH6b8WN3LyGSYeQilLEcJcR1fjBSI2S1A=="],
 
@@ -368,7 +368,7 @@
 
     "safe-buffer": ["safe-buffer@5.2.1", "", {}, "sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ=="],
 
-    "scheduler": ["scheduler@0.28.0-canary-46103596-20260305", "", {}, "sha512-7eRWfbXcCFMZRWhFbXIIll7lkd67AYZx3Dq/q99gnUnbFaZiwgQPowUIElSRBo16AfSK2ilEp7faCHSDShqCEA=="],
+    "scheduler": ["scheduler@0.28.0-canary-900ae094-20260605", "", {}, "sha512-DkEMHoE5iUrr3gpZ7VQnN0Sa73pNRB70EH7QydBW+7YrMhjFyBWni9w6GyrNmLp757lVFegLVEk2no1btv0LuA=="],
 
     "semver": ["semver@7.7.4", "", { "bin": { "semver": "bin/semver.js" } }, "sha512-vFKC2IEtQnVhpT78h1Yp8wzwrf8CM+MzKMHGJZfBtzhZNycRFnXsHk6E5TxIkkMsgNS7mdX3AGB7x2QM2di4lA=="],
 
