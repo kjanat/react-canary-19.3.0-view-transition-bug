@@ -2,10 +2,10 @@
 
 Minimal reproduction for a React canary bug where changing a `<ViewTransition>` component's `name` prop between renders does **not** trigger a view transition unless a child DOM mutation also occurs.
 
-**GitHub Pages preview:** <https://kjanat.github.io/react-canary-19.3.0-view-transition-bug/>\
+**GitHub Pages preview:** <https://kjanat.github.io/react-canary-19.3.0-view-transition-bug/> (now serves a **patched** build that includes the fix, so it demonstrates the *corrected* behaviour, not the bug)\
 **Live sandbox:** <https://codesandbox.io/p/sandbox/yx5sdy> ([preview](https://yx5sdy.csb.app/))
 
-Open the app and toggle between **Broken** and **Workaround** modes to see the difference.
+Open the app and toggle between **Broken** and **Workaround** modes to see the difference. A fix is now proposed in [facebook/react#36728](https://github.com/facebook/react/pull/36728); the GitHub Pages preview above has since been rebuilt against that patched build, so both modes now animate there. Use the [CodeSandbox](https://yx5sdy.csb.app/) (unpatched canary) to observe the original broken vs. workaround contrast.
 
 ## Versions
 
